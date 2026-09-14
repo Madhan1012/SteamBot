@@ -1,0 +1,14 @@
+**/node_modules/
+__pycache__/
+.e2e/
+
+.env
+.vscode
+.DS_Store
+
+
+*.db
+*.csv
+*.log 
+*.so 
+*$py.class

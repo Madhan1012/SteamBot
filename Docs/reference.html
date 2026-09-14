@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NL-SQL Studio</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+    @layer base {
+      html, body { margin: 0; padding: 0; }
+      body { overscroll-behavior: none; }
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+    .dark ::-webkit-scrollbar-thumb { background: #3f3f46; }
+    .dark ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+    
+    /* Ensure textarea has zero border and outline */
+    textarea.no-border-input {
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      resize: none;
+    }
+
+    /* Staggered entrance animations */
+    @keyframes fadeInUp {
+      0% {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-entrance-1 {
+      animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-entrance-2 {
+      animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards;
+      opacity: 0;
+    }
+    .animate-entrance-3 {
+      animation: fadeInUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.22s forwards;
+      opacity: 0;
+    }
+    .animate-entrance-4 {
+      animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.32s forwards;
+      opacity: 0;
+    }
+
+    /* Smooth accordion transition */
+    .accordion-grid {
+      display: grid;
+      grid-template-rows: 1fr;
+      transition: grid-template-rows 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    }
+    .accordion-grid.collapsed {
+      grid-template-rows: 0fr;
+      opacity: 0;
+    }
+    .accordion-inner {
+      overflow: hidden;
+    }
+
+    /* Button copy bounce */
+    @keyframes bounceFeedback {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(0.94); }
+    }
+    .btn-feedback {
+      animation: bounceFeedback 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+  </style>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background": "#fafafa",
+            "surface": "#ffffff",
+            "surface-subtle": "#f4f4f5",
+            "surface-muted": "#e4e4e7",
+            "border-subtle": "#e4e4e7",
+            "border-strong": "#d4d4d8",
+            "primary": "#18181b",
+            "secondary": "#71717a",
+            "dark-bg": "#09090b",
+            "dark-surface": "#121215",
+            "dark-border": "#27272a",
+          },
+          fontFamily: {
+            sans: ["Geist", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+            mono: ["Geist Mono", "ui-monospace", "SFMono-Regular", "monospace"],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-[#fafafa] text-[#18181b] dark:bg-[#09090b] dark:text-[#f4f4f5] font-sans antialiased h-screen flex overflow-hidden transition-colors duration-200">
+<!-- Left Sidebar (Monochrome Geist Style) -->
+<aside class="w-64 bg-[#f4f4f5]/70 dark:bg-[#121215] border-r border-[#e4e4e7] dark:border-[#27272a] flex flex-col justify-between select-none shrink-0 transition-all duration-300" id="sidebar">
+<div class="flex flex-col h-full">
+<!-- App Header -->
+<div class="h-13 px-3.5 py-3 flex items-center justify-between border-b border-[#e4e4e7] dark:border-[#27272a]">
+<div class="flex items-center gap-2 group cursor-pointer">
+<div class="w-6 h-6 rounded-md bg-[#18181b] dark:bg-white text-white dark:text-[#18181b] flex items-center justify-center transition-transform duration-200 group-hover:scale-105 shadow-sm">
+<span class="material-symbols-outlined text-[16px]">smart_toy</span>
+</div>
+<span class="font-medium text-[13px] tracking-tight text-[#18181b] dark:text-white transition-opacity group-hover:opacity-80">Studio LM</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center rounded-md text-[#71717a] hover:text-[#18181b] dark:text-[#a1a1aa] dark:hover:text-white hover:bg-[#e4e4e7]/60 dark:hover:bg-[#27272a] active:scale-95 transition-all duration-150" id="sidebarCollapseBtn" title="Toggle Sidebar">
+<span class="material-symbols-outlined text-[17px]">left_panel_close</span>
+</button>
+</div>
+<!-- Action: New Chat -->
+<div class="p-3">
+<button class="w-full relative overflow-hidden group flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md bg-[#18181b] hover:bg-[#27272a] text-white dark:bg-white dark:hover:bg-[#f4f4f5] dark:text-[#18181b] font-medium text-xs shadow-sm hover:shadow active:scale-[0.98] transition-all duration-150">
+<span class="material-symbols-outlined text-[15px] transition-transform duration-200 group-hover:rotate-90">add</span>
+<span>New Chat</span>
+<div class="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 dark:via-black/5 to-transparent pointer-events-none"></div>
+</button>
+</div>
+<!-- Search Chats -->
+<div class="px-3 pb-2">
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-2.5 text-[#a1a1aa] text-[14px]">search</span>
+<input class="w-full bg-white dark:bg-[#18181b] text-[#18181b] dark:text-white placeholder-[#a1a1aa] text-xs pl-7 pr-2.5 py-1.5 rounded-md border border-[#e4e4e7] dark:border-[#27272a] focus:border-[#18181b] dark:focus:border-white/60 focus:ring-1 focus:ring-[#18181b]/10 dark:focus:ring-white/10 focus:outline-none transition-all duration-150" placeholder="Search chats..." type="text"/>
+</div>
+</div>
+<!-- Chat History List -->
+<div class="flex-1 overflow-y-auto px-2 py-1 space-y-0.5" id="chatThreadList">
+<div class="px-2.5 py-1.5 text-[10px] font-mono font-medium text-[#a1a1aa] uppercase tracking-wider">Recent</div>
+<a class="sidebar-thread relative flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-[#e4e4e7]/80 dark:bg-[#27272a] text-[#18181b] dark:text-white text-xs font-medium group transition-all duration-150 overflow-hidden" data-active="true" href="#">
+<div class="sidebar-indicator absolute left-0 top-1 bottom-1 w-0.5 bg-[#18181b] dark:bg-white rounded-r transition-all duration-200 opacity-100"></div>
+<span class="material-symbols-outlined text-[#18181b] dark:text-white text-[15px] transition-transform group-hover:scale-110">chat_bubble</span>
+<span class="truncate pl-0.5">Monthly MRR by Region</span>
+</a>
+<a class="sidebar-thread relative flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#52525b] hover:text-[#18181b] hover:bg-[#e4e4e7]/50 dark:text-[#a1a1aa] dark:hover:text-white dark:hover:bg-[#1c1c1f] text-xs transition-all duration-150 overflow-hidden" data-active="false" href="#">
+<div class="sidebar-indicator absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#18181b] dark:bg-white rounded-r transition-all duration-200 opacity-0 group-hover:opacity-60"></div>
+<span class="material-symbols-outlined text-[#a1a1aa] group-hover:text-[#18181b] dark:group-hover:text-white text-[15px] transition-all group-hover:scale-110">chat_bubble</span>
+<span class="truncate pl-0.5">Customer Churn Analysis Q3</span>
+</a>
+<a class="sidebar-thread relative flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#52525b] hover:text-[#18181b] hover:bg-[#e4e4e7]/50 dark:text-[#a1a1aa] dark:hover:text-white dark:hover:bg-[#1c1c1f] text-xs transition-all duration-150 overflow-hidden" data-active="false" href="#">
+<div class="sidebar-indicator absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#18181b] dark:bg-white rounded-r transition-all duration-200 opacity-0 group-hover:opacity-60"></div>
+<span class="material-symbols-outlined text-[#a1a1aa] group-hover:text-[#18181b] dark:group-hover:text-white text-[15px] transition-all group-hover:scale-110">chat_bubble</span>
+<span class="truncate pl-0.5">Inventory Restock Forecast</span>
+</a>
+<a class="sidebar-thread relative flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[#52525b] hover:text-[#18181b] hover:bg-[#e4e4e7]/50 dark:text-[#a1a1aa] dark:hover:text-white dark:hover:bg-[#1c1c1f] text-xs transition-all duration-150 overflow-hidden" data-active="false" href="#">
+<div class="sidebar-indicator absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-[#18181b] dark:bg-white rounded-r transition-all duration-200 opacity-0 group-hover:opacity-60"></div>
+<span class="material-symbols-outlined text-[#a1a1aa] group-hover:text-[#18181b] dark:group-hover:text-white text-[15px] transition-all group-hover:scale-110">chat_bubble</span>
+<span class="truncate pl-0.5">Payment Gateway Failure Rates</span>
+</a>
+</div>
+<!-- User footer profile -->
+<div class="p-3 border-t border-[#e4e4e7] dark:border-[#27272a] flex items-center justify-between text-xs text-[#71717a] dark:text-[#a1a1aa]">
+<div class="flex items-center gap-2 truncate hover:opacity-80 transition-opacity cursor-pointer">
+<div class="w-5 h-5 rounded border border-[#d4d4d8] dark:border-[#3f3f46] bg-white dark:bg-[#18181b] flex items-center justify-center text-[#18181b] dark:text-white font-mono text-[9px] font-semibold shadow-xs">DB</div>
+<span class="truncate text-[11px] font-mono">PostgreSQL Workspace</span>
+</div>
+<button class="hover:text-[#18181b] dark:hover:text-white transition-transform duration-200 hover:rotate-45 active:scale-95 p-1 rounded hover:bg-[#e4e4e7]/50 dark:hover:bg-[#27272a]" title="Settings">
+<span class="material-symbols-outlined text-[16px]">settings</span>
+</button>
+</div>
+</div>
+</aside>
+<!-- Main Chat Pane -->
+<div class="flex-1 flex flex-col min-w-0 h-full bg-white dark:bg-[#09090b]">
+<!-- Minimal Header -->
+<header class="h-13 bg-white/95 dark:bg-[#09090b]/95 backdrop-blur-md border-b border-[#e4e4e7] dark:border-[#27272a] px-5 flex items-center justify-between shrink-0 z-10">
+<div class="flex items-center gap-3">
+<button class="w-7 h-7 flex items-center justify-center rounded-md text-[#71717a] hover:text-[#18181b] dark:text-[#a1a1aa] dark:hover:text-white hover:bg-[#f4f4f5] dark:hover:bg-[#18181b] active:scale-95 transition-all" id="sidebarMobileOpen" title="Toggle Sidebar">
+<span class="material-symbols-outlined text-[18px]">menu</span>
+</button>
+<div class="flex items-center gap-2">
+<span class="font-medium text-xs text-[#18181b] dark:text-white">NL-SQL Chat</span>
+<span class="text-[#a1a1aa] dark:text-[#52525b] text-xs">•</span>
+<span class="text-xs text-[#71717a] dark:text-[#a1a1aa] font-mono">e-commerce_production</span>
+</div>
+</div>
+<!-- Theme Switcher -->
+<div class="flex items-center gap-2">
+<button class="w-7 h-7 rounded-md flex items-center justify-center text-[#71717a] hover:text-[#18181b] dark:text-[#a1a1aa] dark:hover:text-white hover:bg-[#f4f4f5] dark:hover:bg-[#18181b] active:scale-90 transition-all duration-200 group" id="themeToggleBtn" title="Toggle Theme" type="button">
+<span class="material-symbols-outlined text-[17px] transition-transform duration-300 group-hover:rotate-45" id="themeIcon">dark_mode</span>
+</button>
+</div>
+</header>
+<!-- Seamless Scrollable Chat Container -->
+<main class="flex-1 overflow-y-auto px-4 md:px-8 py-7">
+<div class="max-w-4xl mx-auto space-y-7">
+<!-- USER MESSAGE -->
+<div class="space-y-1.5 animate-entrance-1">
+<div class="flex items-center gap-2">
+<span class="text-[11px] font-mono font-semibold tracking-wider text-[#18181b] dark:text-white uppercase">User</span>
+<span class="text-[11px] font-mono text-[#a1a1aa]">14:32</span>
+</div>
+<div class="text-[#18181b] dark:text-[#f4f4f5] text-sm leading-relaxed">
+            Show me the top 5 customers with the highest lifetime order values who placed an order in the last 60 days, along with their primary acquisition channel.
+          </div>
+</div>
+<!-- ASSISTANT MESSAGE -->
+<div class="space-y-3.5 pt-1 animate-entrance-2">
+<div class="flex items-center gap-2">
+<span class="text-[11px] font-mono font-semibold tracking-wider text-[#18181b] dark:text-white uppercase">Assistant</span>
+</div>
+<div class="text-[#3f3f46] dark:text-[#d4d4d8] text-sm leading-relaxed">
+            I analyzed customer transaction logs over the past 60 days and aggregated total spend across their full history. Here are the top 5 high-value accounts meeting the recency threshold:
+          </div>
+<!-- Collapsible SQL Accordion -->
+<div class="rounded-lg border border-[#e4e4e7] dark:border-[#27272a] bg-[#fafafa] dark:bg-[#121215] overflow-hidden transition-all duration-200 hover:border-[#d4d4d8] dark:hover:border-[#3f3f46]">
+<!-- Header Toggle -->
+<div class="px-3.5 py-2 flex items-center justify-between hover:bg-[#f4f4f5] dark:hover:bg-[#18181b] transition-colors text-left select-none cursor-pointer group" id="sqlAccordionBtn">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#71717a] dark:text-[#a1a1aa] text-[16px] transition-transform duration-300 ease-out" id="sqlChevron">expand_more</span>
+<span class="text-[11px] font-mono font-medium uppercase tracking-wider text-[#18181b] dark:text-white group-hover:opacity-90">Generated SQL</span>
+</div>
+<button class="flex items-center gap-1.5 px-2 py-1 rounded border border-[#e4e4e7] dark:border-[#27272a] text-[11px] font-mono text-[#52525b] hover:text-[#18181b] dark:text-[#a1a1aa] dark:hover:text-white bg-white dark:bg-[#18181b] hover:bg-[#f4f4f5] dark:hover:bg-[#27272a] active:scale-95 transition-all shadow-xs" id="copySqlBtn" title="Copy SQL" type="button">
+<span class="material-symbols-outlined text-[13px] transition-transform duration-150" id="copySqlIcon">content_copy</span>
+<span id="copySqlText">Copy</span>
+</button>
+</div>
+<!-- SQL Code View with smooth accordion animation -->
+<div class="accordion-grid" id="sqlAccordionWrapper">
+<div class="accordion-inner">
+<div class="p-3.5 border-t border-[#e4e4e7] dark:border-[#27272a] overflow-x-auto bg-[#f4f4f5] dark:bg-[#09090b] text-[#18181b] dark:text-[#f4f4f5]" id="sqlCodeContainer">
+<pre class="font-mono text-xs leading-relaxed select-all"><code><span class="font-semibold text-[#18181b] dark:text-white">SELECT</span> 
+  c.customer_id, 
+  c.full_name, 
+  c.acquisition_channel, 
+  <span class="font-semibold text-[#18181b] dark:text-white">COUNT</span>(o.order_id) <span class="font-semibold text-[#18181b] dark:text-white">AS</span> total_orders, 
+  <span class="font-semibold text-[#18181b] dark:text-white">SUM</span>(o.total_amount) <span class="font-semibold text-[#18181b] dark:text-white">AS</span> ltv_amount, 
+  <span class="font-semibold text-[#18181b] dark:text-white">MAX</span>(o.order_date) <span class="font-semibold text-[#18181b] dark:text-white">AS</span> last_purchase_date 
+<span class="font-semibold text-[#18181b] dark:text-white">FROM</span> customers c 
+<span class="font-semibold text-[#18181b] dark:text-white">JOIN</span> orders o <span class="font-semibold text-[#18181b] dark:text-white">ON</span> c.customer_id = o.customer_id 
+<span class="font-semibold text-[#18181b] dark:text-white">WHERE</span> o.order_date &gt;= <span class="font-semibold text-[#18181b] dark:text-white">NOW</span>() - <span class="font-semibold text-[#18181b] dark:text-white">INTERVAL</span> <span class="text-[#71717a] dark:text-[#a1a1aa]">'60 days'</span> 
+<span class="font-semibold text-[#18181b] dark:text-white">GROUP BY</span> c.customer_id, c.full_name, c.acquisition_channel 
+<span class="font-semibold text-[#18181b] dark:text-white">ORDER BY</span> ltv_amount <span class="font-semibold text-[#18181b] dark:text-white">DESC</span> 
+<span class="font-semibold text-[#18181b] dark:text-white">LIMIT</span> <span class="font-mono text-[#18181b] dark:text-white">5</span>;</code></pre>
+</div>
+</div>
+</div>
+</div>
+<!-- Clean Monochrome Query Results Data Table -->
+<div class="rounded-lg border border-[#e4e4e7] dark:border-[#27272a] bg-white dark:bg-[#121215] overflow-hidden shadow-xs transition-shadow duration-200 hover:shadow-sm">
+<div class="overflow-x-auto">
+<table class="w-full text-left text-xs font-mono">
+<thead>
+<tr class="bg-[#fafafa] dark:bg-[#18181b] text-[#71717a] dark:text-[#a1a1aa] border-b border-[#e4e4e7] dark:border-[#27272a] uppercase tracking-wider text-[10px]">
+<th class="py-2.5 px-3.5 font-medium">Customer ID</th>
+<th class="py-2.5 px-3.5 font-medium font-sans">Name</th>
+<th class="py-2.5 px-3.5 font-medium font-sans">Channel</th>
+<th class="py-2.5 px-3.5 font-medium text-right font-sans">Total Orders</th>
+<th class="py-2.5 px-3.5 font-medium text-right font-sans">LTV Amount</th>
+<th class="py-2.5 px-3.5 font-medium font-sans">Last Purchase Date</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#e4e4e7] dark:divide-[#27272a] text-[#3f3f46] dark:text-[#d4d4d8]">
+<tr class="hover:bg-[#f4f4f5]/70 dark:hover:bg-[#18181b]/70 transition-colors duration-150 cursor-pointer">
+<td class="py-2.5 px-3.5 font-semibold text-[#18181b] dark:text-white">CUST-10492</td>
+<td class="py-2.5 px-3.5 font-sans text-[#18181b] dark:text-white">Eleanor Vance</td>
+<td class="py-2.5 px-3.5 font-sans text-[#71717a] dark:text-[#a1a1aa]">Enterprise Sales</td>
+<td class="py-2.5 px-3.5 text-right">42</td>
+<td class="py-2.5 px-3.5 text-right font-semibold text-[#18181b] dark:text-white">$148,920.00</td>
+<td class="py-2.5 px-3.5 text-[#71717a] dark:text-[#a1a1aa]">2024-05-18</td>
+</tr>
+<tr class="hover:bg-[#f4f4f5]/70 dark:hover:bg-[#18181b]/70 transition-colors duration-150 cursor-pointer">
+<td class="py-2.5 px-3.5 font-medium text-[#18181b] dark:text-white">CUST-08831</td>
+<td class="py-2.5 px-3.5 font-sans text-[#18181b] dark:text-white">Marcus Chen</td>
+<td class="py-2.5 px-3.5 font-sans text-[#71717a] dark:text-[#a1a1aa]">Organic Search</td>
+<td class="py-2.5 px-3.5 text-right">31</td>
+<td class="py-2.5 px-3.5 text-right font-medium text-[#18181b] dark:text-white">$94,310.50</td>
+<td class="py-2.5 px-3.5 text-[#71717a] dark:text-[#a1a1aa]">2024-05-14</td>
+</tr>
+<tr class="hover:bg-[#f4f4f5]/70 dark:hover:bg-[#18181b]/70 transition-colors duration-150 cursor-pointer">
+<td class="py-2.5 px-3.5 font-medium text-[#18181b] dark:text-white">CUST-12004</td>
+<td class="py-2.5 px-3.5 font-sans text-[#18181b] dark:text-white">Siddharth Nair</td>
+<td class="py-2.5 px-3.5 font-sans text-[#71717a] dark:text-[#a1a1aa]">Direct Referral</td>
+<td class="py-2.5 px-3.5 text-right">28</td>
+<td class="py-2.5 px-3.5 text-right font-medium text-[#18181b] dark:text-white">$88,400.00</td>
+<td class="py-2.5 px-3.5 text-[#71717a] dark:text-[#a1a1aa]">2024-05-02</td>
+</tr>
+<tr class="hover:bg-[#f4f4f5]/70 dark:hover:bg-[#18181b]/70 transition-colors duration-150 cursor-pointer">
+<td class="py-2.5 px-3.5 font-medium text-[#18181b] dark:text-white">CUST-05499</td>
+<td class="py-2.5 px-3.5 font-sans text-[#18181b] dark:text-white">Helena Rostova</td>
+<td class="py-2.5 px-3.5 font-sans text-[#71717a] dark:text-[#a1a1aa]">Paid Acquisition</td>
+<td class="py-2.5 px-3.5 text-right">19</td>
+<td class="py-2.5 px-3.5 text-right font-medium text-[#18181b] dark:text-white">$72,150.25</td>
+<td class="py-2.5 px-3.5 text-[#71717a] dark:text-[#a1a1aa]">2024-04-29</td>
+</tr>
+<tr class="hover:bg-[#f4f4f5]/70 dark:hover:bg-[#18181b]/70 transition-colors duration-150 cursor-pointer">
+<td class="py-2.5 px-3.5 font-medium text-[#18181b] dark:text-white">CUST-09121</td>
+<td class="py-2.5 px-3.5 font-sans text-[#18181b] dark:text-white">David Alvarez</td>
+<td class="py-2.5 px-3.5 font-sans text-[#71717a] dark:text-[#a1a1aa]">Enterprise Sales</td>
+<td class="py-2.5 px-3.5 text-right">24</td>
+<td class="py-2.5 px-3.5 text-right font-medium text-[#18181b] dark:text-white">$65,890.00</td>
+<td class="py-2.5 px-3.5 text-[#71717a] dark:text-[#a1a1aa]">2024-04-18</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Export Actions -->
+<div class="px-3 py-2 bg-[#fafafa] dark:bg-[#18181b] border-t border-[#e4e4e7] dark:border-[#27272a] flex items-center justify-end gap-2 text-xs">
+<button class="px-2.5 py-1 rounded border border-[#e4e4e7] dark:border-[#27272a] bg-white dark:bg-[#121215] hover:bg-[#f4f4f5] dark:hover:bg-[#27272a] text-[#52525b] hover:text-[#18181b] dark:text-[#a1a1aa] dark:hover:text-white active:scale-95 transition-all flex items-center gap-1.5 text-[11px] font-mono shadow-xs" id="exportCsvBtn" type="button">
+<span class="material-symbols-outlined text-[14px]" id="exportCsvIcon">download</span>
+<span id="exportCsvText">Export CSV</span>
+</button>
+<button class="px-2.5 py-1 rounded border border-[#e4e4e7] dark:border-[#27272a] bg-white dark:bg-[#121215] hover:bg-[#f4f4f5] dark:hover:bg-[#27272a] text-[#52525b] hover:text-[#18181b] dark:text-[#a1a1aa] dark:hover:text-white active:scale-95 transition-all flex items-center gap-1.5 text-[11px] font-mono shadow-xs" id="exportJsonBtn" type="button">
+<span class="material-symbols-outlined text-[14px]" id="exportJsonIcon">data_object</span>
+<span id="exportJsonText">Copy JSON</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Input Area (Monochrome Geist Style) -->
+<footer class="p-4 md:px-8 shrink-0 bg-transparent animate-entrance-3">
+<div class="max-w-4xl mx-auto">
+<!-- Input container box -->
+<div class="relative rounded-xl bg-white dark:bg-[#121215] border border-[#d4d4d8] dark:border-[#27272a] shadow-xs p-2.5 focus-within:border-[#18181b] dark:focus-within:border-white/70 focus-within:shadow-md focus-within:ring-2 focus-within:ring-black/5 dark:focus-within:ring-white/5 transition-all duration-200" id="inputContainer">
+<!-- Textarea has explicitly NO border -->
+<textarea class="no-border-input w-full bg-transparent text-[#18181b] dark:text-white placeholder-[#a1a1aa] text-sm pr-12 pl-1 py-1 leading-relaxed max-h-48 min-h-[30px] border-0 border-none outline-none focus:outline-none focus:ring-0 focus:border-0" id="chatInput" placeholder="Ask your database in plain English..." rows="1"></textarea>
+<!-- Monochrome Send Button -->
+<button class="absolute right-2.5 bottom-2.5 w-7 h-7 rounded-full bg-[#18181b]/30 dark:bg-white/30 text-white dark:text-[#18181b] flex items-center justify-center transition-all duration-200 shadow-xs cursor-not-allowed" disabled="" id="sendBtn" title="Send Message" type="button">
+<span class="material-symbols-outlined text-[16px] font-semibold transition-transform duration-150">arrow_upward</span>
+</button>
+</div>
+<div class="text-center text-[11px] font-mono text-[#a1a1aa] mt-2 select-none">
+          Press <kbd class="px-1 py-0.5 rounded border border-[#e4e4e7] dark:border-[#27272a] bg-[#f4f4f5] dark:bg-[#18181b] text-[#71717a] dark:text-[#a1a1aa] text-[10px]">Enter</kbd> to send, <kbd class="px-1 py-0.5 rounded border border-[#e4e4e7] dark:border-[#27272a] bg-[#f4f4f5] dark:bg-[#18181b] text-[#71717a] dark:text-[#a1a1aa] text-[10px]">Shift + Enter</kbd> for new line
+        </div>
+</div>
+</footer>
+</div>
+<!-- Interactive Scripts -->
+<script>
+    // Theme Toggle Functionality with smooth rotation transition
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeIcon = document.getElementById('themeIcon');
+    const htmlEl = document.documentElement;
+
+    function updateThemeIcon() {
+      if (htmlEl.classList.contains('dark')) {
+        themeIcon.textContent = 'light_mode';
+        themeToggleBtn.setAttribute('title', 'Switch to Light mode');
+      } else {
+        themeIcon.textContent = 'dark_mode';
+        themeToggleBtn.setAttribute('title', 'Switch to Dark mode');
+      }
+    }
+
+    themeToggleBtn.addEventListener('click', () => {
+      themeIcon.style.transform = 'scale(0.7) rotate(90deg)';
+      setTimeout(() => {
+        htmlEl.classList.toggle('dark');
+        updateThemeIcon();
+        themeIcon.style.transform = 'scale(1) rotate(0deg)';
+      }, 150);
+    });
+    updateThemeIcon();
+
+    // SQL Accordion Smooth Toggle
+    const sqlAccordionBtn = document.getElementById('sqlAccordionBtn');
+    const sqlAccordionWrapper = document.getElementById('sqlAccordionWrapper');
+    const sqlChevron = document.getElementById('sqlChevron');
+    let isSqlExpanded = true;
+
+    sqlAccordionBtn.addEventListener('click', (e) => {
+      if (e.target.closest('#copySqlBtn')) return;
+      isSqlExpanded = !isSqlExpanded;
+      if (isSqlExpanded) {
+        sqlAccordionWrapper.classList.remove('collapsed');
+        sqlChevron.style.transform = 'rotate(0deg)';
+      } else {
+        sqlAccordionWrapper.classList.add('collapsed');
+        sqlChevron.style.transform = 'rotate(-90deg)';
+      }
+    });
+
+    // Helper feedback animation function
+    function showFeedback(btn, iconEl, textEl, originalText, originalIcon) {
+      btn.classList.add('btn-feedback');
+      iconEl.textContent = 'check';
+      iconEl.classList.add('text-emerald-600', 'dark:text-emerald-400');
+      textEl.textContent = 'Copied!';
+      setTimeout(() => {
+        btn.classList.remove('btn-feedback');
+        iconEl.textContent = originalIcon;
+        iconEl.classList.remove('text-emerald-600', 'dark:text-emerald-400');
+        textEl.textContent = originalText;
+      }, 1500);
+    }
+
+    // Copy SQL Button
+    const copySqlBtn = document.getElementById('copySqlBtn');
+    const copySqlIcon = document.getElementById('copySqlIcon');
+    const copySqlText = document.getElementById('copySqlText');
+
+    copySqlBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const sql = `SELECT c.customer_id, c.full_name, c.acquisition_channel, COUNT(o.order_id) AS total_orders, SUM(o.total_amount) AS ltv_amount, MAX(o.order_date) AS last_purchase_date FROM customers c JOIN orders o ON c.customer_id = o.customer_id WHERE o.order_date >= NOW() - INTERVAL '60 days' GROUP BY c.customer_id, c.full_name, c.acquisition_channel ORDER BY ltv_amount DESC LIMIT 5;`;
+      navigator.clipboard?.writeText(sql);
+      showFeedback(copySqlBtn, copySqlIcon, copySqlText, 'Copy', 'content_copy');
+    });
+
+    // Copy JSON from table
+    const exportJsonBtn = document.getElementById('exportJsonBtn');
+    const exportJsonIcon = document.getElementById('exportJsonIcon');
+    const exportJsonText = document.getElementById('exportJsonText');
+
+    exportJsonBtn.addEventListener('click', () => {
+      const data = [
+        {"customer_id": "CUST-10492", "name": "Eleanor Vance", "channel": "Enterprise Sales", "total_orders": 42, "ltv_amount": 148920.00, "last_purchase_date": "2024-05-18"},
+        {"customer_id": "CUST-08831", "name": "Marcus Chen", "channel": "Organic Search", "total_orders": 31, "ltv_amount": 94310.50, "last_purchase_date": "2024-05-14"},
+        {"customer_id": "CUST-12004", "name": "Siddharth Nair", "channel": "Direct Referral", "total_orders": 28, "ltv_amount": 88400.00, "last_purchase_date": "2024-05-02"},
+        {"customer_id": "CUST-05499", "name": "Helena Rostova", "channel": "Paid Acquisition", "total_orders": 19, "ltv_amount": 72150.25, "last_purchase_date": "2024-04-29"},
+        {"customer_id": "CUST-09121", "name": "David Alvarez", "channel": "Enterprise Sales", "total_orders": 24, "ltv_amount": 65890.00, "last_purchase_date": "2024-04-18"}
+      ];
+      navigator.clipboard?.writeText(JSON.stringify(data, null, 2));
+      showFeedback(exportJsonBtn, exportJsonIcon, exportJsonText, 'Copy JSON', 'data_object');
+    });
+
+    // CSV Download
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    const exportCsvIcon = document.getElementById('exportCsvIcon');
+    const exportCsvText = document.getElementById('exportCsvText');
+
+    exportCsvBtn.addEventListener('click', () => {
+      const csv = `Customer ID,Name,Channel,Total Orders,LTV Amount,Last Purchase Date\nCUST-10492,Eleanor Vance,Enterprise Sales,42,148920.00,2024-05-18\nCUST-08831,Marcus Chen,Organic Search,31,94310.50,2024-05-14\nCUST-12004,Siddharth Nair,Direct Referral,28,88400.00,2024-05-02\nCUST-05499,Helena Rostova,Paid Acquisition,19,72150.25,2024-04-29\nCUST-09121,David Alvarez,Enterprise Sales,24,65890.00,2024-04-18`;
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'query_results.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      showFeedback(exportCsvBtn, exportCsvIcon, exportCsvText, 'Export CSV', 'download');
+    });
+
+    // Auto-grow textarea & interactive send button transition
+    const chatInput = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function updateSendButtonState() {
+      const hasText = chatInput.value.trim().length > 0;
+      if (hasText) {
+        sendBtn.disabled = false;
+        sendBtn.classList.remove('bg-[#18181b]/30', 'dark:bg-white/30', 'cursor-not-allowed');
+        sendBtn.classList.add('bg-[#18181b]', 'hover:bg-[#27272a]', 'dark:bg-white', 'dark:hover:bg-[#e4e4e7]', 'cursor-pointer', 'active:scale-95', 'shadow-sm', 'hover:scale-105');
+      } else {
+        sendBtn.disabled = true;
+        sendBtn.classList.remove('bg-[#18181b]', 'hover:bg-[#27272a]', 'dark:bg-white', 'dark:hover:bg-[#e4e4e7]', 'cursor-pointer', 'active:scale-95', 'hover:scale-105');
+        sendBtn.classList.add('bg-[#18181b]/30', 'dark:bg-white/30', 'cursor-not-allowed');
+      }
+    }
+
+    chatInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = (this.scrollHeight) + 'px';
+      updateSendButtonState();
+    });
+
+    // Sidebar thread active toggle interaction
+    const threadLinks = document.querySelectorAll('.sidebar-thread');
+    threadLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        threadLinks.forEach(item => {
+          item.classList.remove('bg-[#e4e4e7]/80', 'dark:bg-[#27272a]', 'text-[#18181b]', 'dark:text-white', 'font-medium');
+          item.classList.add('text-[#52525b]', 'dark:text-[#a1a1aa]');
+          const icon = item.querySelector('.material-symbols-outlined');
+          icon.classList.remove('text-[#18181b]', 'dark:text-white');
+          icon.classList.add('text-[#a1a1aa]');
+          const indicator = item.querySelector('.sidebar-indicator');
+          if (indicator) {
+            indicator.classList.remove('opacity-100');
+            indicator.classList.add('opacity-0');
+          }
+        });
+        link.classList.remove('text-[#52525b]', 'dark:text-[#a1a1aa]');
+        link.classList.add('bg-[#e4e4e7]/80', 'dark:bg-[#27272a]', 'text-[#18181b]', 'dark:text-white', 'font-medium');
+        const activeIcon = link.querySelector('.material-symbols-outlined');
+        activeIcon.classList.remove('text-[#a1a1aa]');
+        activeIcon.classList.add('text-[#18181b]', 'dark:text-white');
+        const activeIndicator = link.querySelector('.sidebar-indicator');
+        if (activeIndicator) {
+          activeIndicator.classList.remove('opacity-0');
+          activeIndicator.classList.add('opacity-100');
+        }
+      });
+    });
+
+    // Sidebar collapse toggling
+    const sidebar = document.getElementById('sidebar');
+    const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
+    const sidebarMobileOpen = document.getElementById('sidebarMobileOpen');
+
+    function toggleSidebar() {
+      sidebar.classList.toggle('hidden');
+    }
+    sidebarCollapseBtn?.addEventListener('click', toggleSidebar);
+    sidebarMobileOpen?.addEventListener('click', toggleSidebar);
+  </script>
+</body></html>

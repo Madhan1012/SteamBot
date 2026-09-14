@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body { 
+    margin: 0; 
+    padding: 0; 
+    color-scheme: light !important;
+  }
+  body { 
+    overscroll-behavior: none; 
+  }
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+
+textarea.no-border-input {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  resize: none;
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-entrance-1 {
+  animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.animate-entrance-2 {
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.12s forwards;
+  opacity: 0;
+}
+.animate-entrance-3 {
+  animation: fadeInUp 0.55s cubic-bezier(0.16, 1, 0.3, 1) 0.22s forwards;
+  opacity: 0;
+}
+
+.accordion-grid {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+}
+.accordion-grid.collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+.accordion-inner {
+  overflow: hidden;
+}
+
+@keyframes bounceFeedback {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.94); }
+}
+.btn-feedback {
+  animation: bounceFeedback 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
