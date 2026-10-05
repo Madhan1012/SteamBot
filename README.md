@@ -62,3 +62,77 @@ uvicorn main:app --reload --port 8000
 npm install
 npm run dev
 ```
+
+---
+
+## Details:
+
+#### It is an Intent classification engine.
+
+The project uses a regex‑based extractor, not a scikit‑learn model.  
+app/core/extractor.py contains all the pattern logic; no external ML library is imported or trained.
+
+
+
+1. Regex implementation
+
+- Number of rules/patterns: ~12
+  - free keyword → price = 0
+  - price ranges (under, over, <, >) → price BETWEEN …
+  - year extraction (19xx or 20xx) → release_date LIKE %year%
+  - developer patterns (by, publisher, etc.) → developers LIKE …
+  - sorting keywords  
+    - cheapest / most expensive → ORDER BY price ASC/DESC  
+    - top rated / newest → ORDER BY user_score DESC, ORDER BY release_date DESC
+
+- Unmatched queries: The extractor returns an empty DynamicEntities.  
+  In that case the builder generates a default query:
+
+  sql
+  SELECT appid, name, price, user_score, developers, release_date
+  FROM games
+  ORDER BY user_score DESC LIMIT 15;
+  
+
+  So every input yields a harmless SELECT statement.
+
+
+
+2. Preventing destructive queries
+
+- The DynamicQueryBuilder only constructs SELECT statements; it never creates UPDATE/DELETE or INSERT clauses.
+- All parameters are bound (?) and the query is executed via SQLite’s execute_query.  
+  No user‑controlled SQL injection path exists.
+
+
+
+3. Ambiguous queries
+
+The system does not explicitly detect ambiguity.  
+If a phrase could match multiple patterns, the extractor will pick the first matching rule it encounters (order of checks in code).  
+No clarification prompt is issued; the generated query reflects that single interpretation.  
+
+(Adding an explicit disambiguation step would require user interaction or a confidence score.)
+
+
+
+4. Dataset / schema
+
+- Fixed schema – hard‑coded in DynamicQueryBuilder and SQLite database (~/Projects/SteamBot/games.db).  
+  The SELECT list is:
+
+  
+  appid, name, price, user_score, developers, release_date
+  
+
+  No dynamic table discovery or schema inference is performed.
+
+
+
+Summary
+
+- Intent classification → regex pattern matching.  
+- Roughly 12 rules; unmatched queries return a default SELECT.  
+- Only SELECT statements are generated – destructive queries impossible.  
+- Ambiguity not handled; the first match wins.  
+- Schema is fixed, hard‑coded to the games table in SQLite.
